@@ -79,3 +79,14 @@ __enhancd::flag::print_help()
         | __enhancd::command::awk -f "$ENHANCD_ROOT/lib/help.awk"
     return $?
 }
+
+__enhancd::flag::edit()
+{
+    local config
+    config="$ENHANCD_DIR/flag.ltsv"
+    if [[ ! -f ${config} ]]; then
+        echo "short:	long:--YOURS	desc:YOUR FUNCTION DESCRIPTION	func:__enhancd::sources::YOURS	condition:true" >"${config}"
+    fi
+    $EDITOR "${config}" < /dev/tty > /dev/tty
+    printf "\0"
+}

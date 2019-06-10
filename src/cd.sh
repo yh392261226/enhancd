@@ -93,6 +93,11 @@ __enhancd::cd::builtin()
 {
     local -i code=0
 
+    if [[ $1 == $'\0' ]]; then
+        echo "[INFO] didnt run cd command"
+        return 0
+    fi
+
     __enhancd::cd::before
     builtin cd "$@"
     code=$?
