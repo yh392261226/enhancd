@@ -170,3 +170,45 @@ __enhancd::filter::exclude_gitignore()
         echo "${line}"
     done
 }
+
+__enhancd::filter::ignores()
+{
+    local config="$ENHANCD_ROOT/ignores.ltsv"
+    local -a ignores
+    if [[ -f ${config} ]]; then
+        ignores=( $(cat "${config}" | __enhancd::ltsv::parse -q '{print ltsv("path")}') )
+    else
+        cat <&0
+        return 0
+    fi
+
+    if [[ ${ignores[@]} == 0 ]]; then
+        # TODO: consider to handle this as error
+        cat <&0
+        return 0
+    fi
+
+    contains() {
+        local input ignore
+        input=${1:?need one argument}
+        for ignore in "${ignores[@]}"
+        do
+            ignore=${ignore//\./\\.} # escape dot
+            ignore=${ignore/\~/$HOME} # expand ~ to home dir
+            ignore=${ignore/\$HOME/$HOME} # expand $HOME to home dir
+            if [[ ${input} =~ ^${ignore} ]]; then
+                return 0
+            fi
+        done
+        return 1
+    }
+
+    local line
+    while read line
+    do
+        if contains ${line}; then
+            continue
+        fi
+        echo "${line}"
+    done
+}

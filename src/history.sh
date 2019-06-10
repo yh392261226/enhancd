@@ -12,6 +12,7 @@ __enhancd::history::list()
     __enhancd::history::open \
         | __enhancd::filter::reverse \
         | __enhancd::filter::unique \
+        | __enhancd::filter::ignores \
         | __enhancd::filter::exists \
         | __enhancd::filter::fuzzy "$@" \
         | __enhancd::filter::exclude "$PWD"
