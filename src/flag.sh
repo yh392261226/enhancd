@@ -1,9 +1,37 @@
+__enhancd::flag::config()
+{
+    local -a configs
+    configs=(
+    "$ENHANCD_ROOT/flag.ltsv"
+    "$ENHANCD_DIR/flag.ltsv"
+    )
+
+    local config
+    for config in "${configs[@]}"
+    do
+        if [[ -f ${config} ]]; then
+            cat "${config}"
+        fi
+    done
+}
+
+__enhancd::flag::get()
+{
+    local opt="${1:?value of key short or long required}" key="${2}"
+    __enhancd::flag::config \
+        | __enhancd::filter::exclude_commented \
+        | __enhancd::ltsv::parse \
+        -v opt="${opt}" \
+        -v key="${key}" \
+        -q 'ltsv("short")==opt||ltsv("long")==opt{print key=="" ? $0 : ltsv(key)}'
+}
+
 __enhancd::flag::parse()
 {
     local opt="$1" arg="$2" func
 
-    func="$(__enhancd::ltsv::get "${opt}" "func")"
-    cond="$(__enhancd::ltsv::get "${opt}" "condition")"
+    func="$(__enhancd::flag::get "${opt}" "func")"
+    cond="$(__enhancd::flag::get "${opt}" "condition")"
 
     if ! __enhancd::command::run "${cond}"; then
         echo "${opt}: defined but require '${cond}'" >&2
@@ -47,7 +75,7 @@ __enhancd::flag::is_default()
 
 __enhancd::flag::print_help()
 {
-    __enhancd::ltsv::open \
+    __enhancd::flag::config \
         | __enhancd::command::awk -f "$ENHANCD_ROOT/lib/help.awk"
     return $?
 }
