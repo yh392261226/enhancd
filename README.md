@@ -5,8 +5,6 @@
 [awk-link]: http://pubs.opengroup.org/onlinepubs/9699919799/utilities/awk.html
 [license-link]: http://b4b4r07.mit-license.org
 
-[![][travis-badge]][travis-link] [![][version-badge]][version-link]
-
 <a href="top"></a>
 
 <p align="center">
@@ -33,9 +31,13 @@
 
 <br>
 
+[![][travis-badge]][travis-link] [![][version-badge]][version-link]
+
 :rocket: enhancd <sup>v2</sup> is ...
 
 > A next-generation `cd` command with an interactive filter :sparkles:
+
+![](https://user-images.githubusercontent.com/4442708/59201362-38474300-8bd5-11e9-97ea-8b8ad68b2a9e.png)
 
 ## Description
 
@@ -43,7 +45,7 @@
 
 Nevertheless, it is not so easy to handle unfortunately. A directory path given as an argument to `cd` command must be a valid path that exists and is able to resolve. In other words, you cannot pass a partial path such as "dir" (you are in `/home/lisa`, dir is `/home/lisa/work/dir`) to `cd` command.
 
-The new cd command called "enhancd" enhanced the flexibility and usability for a user. enhancd will memorize all directories visited by a user and use it for the pathname resolution. If the log of enhancd have more than one directory path with the same name, enhancd will pass the candidate directories list to the filter within the ENHANCD_FILTER environment variable in order to narrow it down to one directory.
+The new cd command called "enhancd" enhanced the flexibility and usability for a user. enhancd will memorize all directories visited by a user and use it for the pathname resolution. If the log of enhancd have more than one directory path with the same name, enhancd will pass the candidate directories list to the filter within the `ENHANCD_FILTER` environment variable in order to narrow it down to one directory.
 
 Thanks to this mechanism, the user can intuitively and easily change the directory you want to go.
 
@@ -57,7 +59,8 @@ Thanks to this mechanism, the user can intuitively and easily change the directo
 - Go back to a specific parent directory like [zsh-bd](https://github.com/Tarrasch/zsh-bd)
 - Fuzzy search in a similar name directory
 - Support standard input (`echo $HOME | cd` is acceptable)
-- Custom options (user-defined option is acceptable)
+- Custom options (You can use user-defined options)
+- Custom Tab behavior
 
 ### Fuzzy search
 
@@ -79,7 +82,7 @@ You can fuzzy-search a directory name you want to run `cd`. For example, a word 
 
 ## Usage
 
-Under Zsh or Bourne shells such as sh and bash, you just source `init.sh` into your shell:
+Under Zsh or Bash, you just source `init.sh` into your shell:
 
 ```console
 $ source ./init.sh
@@ -93,7 +96,7 @@ The basic usage of the `cd` command that has been implemented by `enhancd` is th
 $ cd [-|..] <directory>
 ```
 
-If no arguments are given, enhancd `cd` command will display a list of the directory you've visited once, encourage you to filter the directory that you want to move.
+If no arguments are given, enhancd `cd` command will output a list of directories you've visited once, encourage you to filter the directory that you want to go to.
 
 ```console
 $ cd
@@ -111,7 +114,7 @@ $ cd
 > _
 ```
 
-The ENHANCD_FILTER variable is specified as a list of one or more visual filter command such as [this](#heartbeat-requirements) separated by colon (`:`) characters.
+`ENHANCD_FILTER` variable is specified as a list of one or more visual filter command such as [this](#heartbeat-requirements) separated by colon (`:`) characters.
 
 It is likely the only environment variable you'll need to set when starting enhancd.
 
@@ -122,11 +125,11 @@ $ ENHANCD_FILTER=peco; export ENHANCD_FILTER
 Since the `$ENHANCD_FILTER` variable can be a list, enhancd will use `$ENHANCD_FILTER` to mean the first element unless otherwise specified.
 
 ```console
-$ ENHANCD_FILTER=fzy:fzf:peco
+$ ENHANCD_FILTER="fzy:fzf --height=50% --reverse:peco"
 $ export ENHANCD_FILTER
 ```
 
-Also, 
+Some other examples are here:
 
 <details>
 <summary><strong>Hyphen (<code>-</code>)</strong></summary>
@@ -180,20 +183,6 @@ When moving to the parent directory, the current directory is removed from the c
 
 </details>
 
-### Options
-
-```console
-$ cd --help
-usage: cd [OPTIONS] [dir]
-
-OPTIONS:
-  -h, --help       Show help message
-  -G, --ghq        Filter ghq list
-
-```
-
-Those options are defined at [config.ltsv](https://github.com/b4b4r07/enhancd/blob/master/config.ltsv). As it is written in this json, the user have to make a directory list file or script that generate the list like [this script](https://github.com/b4b4r07/enhancd/blob/master/src/custom/sources/ghq.sh).　Of cource, you can disable those options if you do not like it.
-
 ## Installation
 
 enhancd can work on bash and zsh. But let's say we use bash as default shell at this example:
@@ -222,13 +211,49 @@ $ echo "source ~/enhancd/init.sh"  >> ~/.bash_profile
 $ source ~/.bash_profile
 ```
 
-Also if you use zsh as your shell, you can install this via [zplug](https://github.com/zplug/zplug) which is powerfull plugin mananger for zsh:
+## Configurations
 
-```bash
-zplug "b4b4r07/enhancd", use:init.sh
+### Options
+
+```console
+$ cd --help
+usage: cd [OPTIONS] [dir]
+
+OPTIONS:
+  -h, --help       Show help message
+  ...
+
 ```
 
-## Configurations
+The default options are defined in [flag.ltsv](https://github.com/b4b4r07/enhancd/blob/master/flag.ltsv). However, you can add (of course, can also update existing options) your own defined options by preparing your flag.ltsv in `$ENHANCD_DIR/flag.ltsv`. As it's written in [LTSV format](http://ltsv.org/), your custom options can be configured like the following:
+
+```ltsv
+short:-G        long:--ghq      desc:use ghq list as dir source func:__enhancd::sources::ghq    condition:which ghq
+```
+
+Your custom sources can be put into `$ENHANCD_DIR/sources/your_file.sh`
+
+```bash
+__enhancd::sources::ghq()
+{
+    {
+        ghq list --full-path
+        {
+            ghq list --full-path
+            __enhancd::history::open
+        } | __enhancd::filter::join
+    } \
+        | __enhancd::filter::exclude "$PWD" \
+        | __enhancd::filter::reverse \
+        | __enhancd::filter::unique \
+        | __enhancd::filter::fuzzy "$@" \
+        | __enhancd::filter::interactive
+}
+```
+
+By doing so, you can call `__enhancd::sources::ghq` with `-G` or `--ghq` flag (needs to source again before calling it).
+
+### Environment variables
 
 <details>
 <summary><strong><code>ENHANCD_DIR</code></strong></summary>
