@@ -128,6 +128,28 @@ __enhancd::filter::limit()
     command head -n "${1:-10}"
 }
 
+__enhancd::filter::contains()
+{
+    local input
+    input=${1:?need one argument}
+    shift
+    local -a ignores=("${@}")
+    if [[ ${#ignores[@]} == 0 ]]; then
+        return 1
+    fi
+    local ignore
+    for ignore in "${ignores[@]}"
+    do
+        ignore=${ignore//\./\\.} # escape dot
+        ignore=${ignore/\~/$HOME} # expand ~ to home dir
+        ignore=${ignore/\$HOME/$HOME} # expand $HOME to home dir
+        if [[ ${input} =~ ${ignore} ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
 __enhancd::filter::exclude_gitignore()
 {
     local -a ignores=()
@@ -146,25 +168,12 @@ __enhancd::filter::exclude_gitignore()
         if [[ -d ${ignore} ]]; then
             ignores+=( "$(basename ${ignore})" )
         fi
-    done <${PWD}/.gitignore
-
-    contains() {
-        local input ignore
-        input=${1:?need one argument}
-        for ignore in "${ignores[@]}"
-        do
-            # https://www.gnu.org/savannah-checkouts/gnu/bash/manual/bash.html#Shell-Parameter-Expansion
-            if [[ ${input} =~ ${ignore//\./\\.} ]]; then
-                return 0
-            fi
-        done
-        return 1
-    }
+    done <"${PWD}/.gitignore"
 
     local line
     while read line
     do
-        if contains ${line}; then
+        if __enhancd::filter::contains "${line}" "${ignores[@]}"; then
             continue
         fi
         echo "${line}"
@@ -173,7 +182,7 @@ __enhancd::filter::exclude_gitignore()
 
 __enhancd::filter::ignores()
 {
-    local config="$ENHANCD_ROOT/ignores.ltsv"
+    local config="$ENHANCD_DIR/ignores.ltsv"
     local -a ignores
     if [[ -f ${config} ]]; then
         ignores=( $(cat "${config}" | __enhancd::ltsv::parse -q '{print ltsv("path")}') )
@@ -188,25 +197,10 @@ __enhancd::filter::ignores()
         return 0
     fi
 
-    contains() {
-        local input ignore
-        input=${1:?need one argument}
-        for ignore in "${ignores[@]}"
-        do
-            ignore=${ignore//\./\\.} # escape dot
-            ignore=${ignore/\~/$HOME} # expand ~ to home dir
-            ignore=${ignore/\$HOME/$HOME} # expand $HOME to home dir
-            if [[ ${input} =~ ^${ignore} ]]; then
-                return 0
-            fi
-        done
-        return 1
-    }
-
     local line
     while read line
     do
-        if contains ${line}; then
+        if __enhancd::filter::contains "${line}" "${ignores[@]}"; then
             continue
         fi
         echo "${line}"
