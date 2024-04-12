@@ -1,5 +1,7 @@
 # Changelog
 
+## [v2.5.1](https://github.com/yh392261226/enhancd/compare/v2.2.4...v2.5.1) - 2024-04-12
+
 ## [v2.5.1](https://github.com/b4b4r07/enhancd/compare/v2.5.0...v2.5.1) - 2023-04-11
 ### Bug fixes
 - fix fish errors by @peeviddy in https://github.com/b4b4r07/enhancd/pull/204
